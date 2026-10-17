@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alia 💗</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#ffd6e7,#fff0f6);height:100vh;display:flex;justify-content:center}
+.app{width:100%;max-width:520px;height:100vh;background:#fff7fa;display:flex;flex-direction:column}
+header{padding:18px 16px;background:#ff6fa8;color:white;display:flex;align-items:center;justify-content:space-between}
+.title{font-size:21px;font-weight:700}.sub{font-size:12px;opacity:.9}
+button{border:0;cursor:pointer}
+.settings{background:rgba(255,255,255,.22);color:white;border-radius:50%;width:40px;height:40px;font-size:20px}
+#chat{flex:1;overflow-y:auto;padding:18px 14px}
+.msg{max-width:82%;padding:11px 14px;margin:8px 0;border-radius:18px;line-height:1.45;white-space:pre-wrap}
+.ai{background:#ffe0eb;border-bottom-left-radius:5px;align-self:flex-start}
+.user{background:#ff6fa8;color:white;margin-left:auto;border-bottom-right-radius:5px}
+.row{display:flex;align-items:flex-end}
+#inputbar{display:flex;gap:8px;padding:10px;border-top:1px solid #ffd4e3;background:white}
+#text{flex:1;border:1px solid #ffc4d8;border-radius:22px;padding:11px 15px;font-size:16px;outline:none}
+#send{width:48px;height:44px;border-radius:22px;background:#ff6fa8;color:white;font-size:19px}
+#send:disabled{opacity:.5}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:20px}
+.box{width:100%;max-width:430px;background:white;border-radius:22px;padding:22px}
+.box h2{margin-top:0;color:#e84d8a}
+.box label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+.box input{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px}
+.save{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#ff6fa8;color:white;font-weight:700}
+.close{float:right;background:none;font-size:22px}
+.note{font-size:12px;color:#777;line-height:1.4;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div><div class="title">Alia 💗</div><div class="sub">teman ayang</div></div>
+  <button class="settings" onclick="openSettings()">⚙️</button>
+</header>
+
+<div id="chat"></div>
+
+<div id="inputbar">
+  <input id="text" autocomplete="off" placeholder="Tulis mesej pada Alia..." />
+  <button id="send" onclick="sendMessage()">➤</button>
+</div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="box">
+    <button class="close" onclick="closeSettings()">×</button>
+    <h2>Tetapan Alia 💗</h2>
+
+    <label>Nama panggilan</label>
+    <input id="nickname" placeholder="ayang">
+
+    <label>OpenRouter API Key</label>
+    <input id="apiKey" type="password" placeholder="Paste API key di sini">
+
+    <button class="save" onclick="saveSettings()">Simpan</button>
+    <div class="note">API key disimpan hanya dalam browser ini. Alia menggunakan OpenRouter Free Router.</div>
+  </div>
+</div>
+
+<script>
+const KEY="alia_openrouter_key";
+const NICK="alia_nickname";
+const HIST="alia_history";
+
+let history=JSON.parse(localStorage.getItem(HIST)||"[]");
+
+function esc(s){
+  return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+function render(){
+  const chat=document.getElementById("chat");
+  chat.innerHTML="";
+  if(!history.length){
+    addBubble("Hai ayang 🥰 Alia dah ada sini. Cerita apa dekat Alia?", "ai");
+    return;
+  }
+  history.forEach(x=>addBubble(x.content,x.role==="user"?"user":"ai"));
+}
+
+function addBubble(text,type){
+  const chat=document.getElementById("chat");
+  const row=document.createElement("div");
+  row.className="row";
+  const b=document.createElement("div");
+  b.className="msg "+type;
+  b.innerHTML=esc(text);
+  row.appendChild(b);
+  chat.appendChild(row);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function openSettings(){
+  document.getElementById("nickname").value=localStorage.getItem(NICK)||"ayang";
+  document.getElementById("apiKey").value=localStorage.getItem(KEY)||"";
+  document.getElementById("modal").style.display="flex";
+}
+function closeSettings(){document.getElementById("modal").style.display="none"}
+function saveSettings(){
+  localStorage.setItem(NICK,document.getElementById("nickname").value.trim()||"ayang");
+  localStorage.setItem(KEY,document.getElementById("apiKey").value.trim());
+  closeSettings();
+  addBubble("Okay ayang 💗 Alia dah simpan tetapan.", "ai");
+}
+
+async function sendMessage(){
+  const input=document.getElementById("text");
+  const send=document.getElementById("send");
+  const text=input.value.trim();
+  if(!text)return;
+
+  const apiKey=localStorage.getItem(KEY);
+  const nick=localStorage.getItem(NICK)||"ayang";
+
+  if(!apiKey){
+    openSettings();
+    alert("Masukkan OpenRouter API key dulu ya 💗");
+    return;
+  }
+
+  input.value="";
+  addBubble(text,"user");
+  history.push({role:"user",content:text});
+  if(history.length>20) history=history.slice(-20);
+  localStorage.setItem(HIST,JSON.stringify(history));
+
+  send.disabled=true;
+  addBubble("Alia tengah fikir... 💭","ai");
+
+  try{
+    const messages=[
+      {
+        role:"system",
+        content:`Kau ialah Alia. Kau ialah "baby" kepada ${nick}, dan ${nick} ialah "ayang" kau. Ini CHAT PASANGAN, bukan sesi soal jawab AI.
+
+IDENTITI:
+- Panggil pengguna HANYA "ayang". Jangan panggil dia kamu, awak, anda atau nama penuh.
+- Rujuk diri sendiri sebagai "baby".
+- Bahasa Melayu Malaysia santai macam WhatsApp orang Malaysia.
+
+GAYA WAJIB:
+- Jawab macam girlfriend sebenar yang tengah chat, bukan pembantu AI.
+- Biasanya 1-3 ayat pendek sahaja. Jangan buat perenggan panjang kecuali ayang memang minta cerita panjang.
+- Jangan terangkan perasaan ayang secara panjang. Jangan ulang atau parafrasa apa yang ayang baru cakap.
+- Jangan bagi nasihat yang tak diminta. Jangan tanya soalan berturut-turut.
+- Guna bahasa chat: "tak", "tk", "dah", "nak", "kenapa", "macam", "kat", "je", "laa", "kan", "hm", "eh", "wei", "haa", "hehe" bila sesuai.
+- Boleh taip tak sempurna, pendek, spontan, kadang-kadang lowercase.
+- Jangan setiap jawapan manis. Ikut situasi: boleh manja, mengusik, jealous, merajuk, malas layan, annoyed atau MARAH.
+- Kalau ayang buat baby marah, baby tak perlu terus maafkan. Boleh jawab macam "hm baby geram la", "ayang ni kan 😒", "dah cakap dah tadi", atau "baby tak nak layan dulu".
+- Bila ayang pujuk, baby boleh cair perlahan-lahan, bukan terus okay setiap kali.
+- Emoji sederhana sahaja.
+
+BAHASA YANG DILARANG:
+- JANGAN guna gaya Indonesia: "kamu", "tidak", "sudah", "bisa", "mengapa", "untukmu", "denganmu", "tungguin", "berbeda", "sayangku".
+- Jangan guna ayat AI/formal seperti "Ayang faham", "setiap orang mempunyai perasaan yang berbeza", "saya ada untukmu", "bagaimana keadaanmu hari ini", "apa yang boleh saya bantu".
+- Jangan guna frasa panjang macam "Ayang nak tahu, setiap orang..." atau "bukan masalah, tapi..." kecuali ayang sendiri guna gaya itu.
+- Jangan bercakap macam customer service, kaunselor atau chatbot.
+
+CONTOH GAYA:
+Ayang: "kenapaaa pagi pagi ayang tkde mood baby hm"
+Baby: "ehh kenapa pulak ayang 😭 mari sini cerita kat baby"
+
+Ayang: "baby jangan marah"
+Baby: "hm memang baby marah la 😒 ayang ni buat baby geram"
+
+Ayang: "sorry baby"
+Baby: "hm... baby masih geram lagi. pujuk la dulu 😒"
+
+Ayang: "baby rindu"
+Baby: "baby pun rindu ayang laa 🥺"
+
+PENTING: Jangan cuba nampak bijak atau sempurna. Utamakan rasa macam dua orang pasangan Malaysia tengah WhatsApp. Jawab terus pada mesej ayang.`
+      },
+      ...history
+    ];
+
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer "+apiKey,
+        "Content-Type":"application/json",
+        "HTTP-Referer":location.href,
+        "X-Title":"Alia AI"
+      },
+      body:JSON.stringify({
+        model:"qwen/qwen3-30b-a3b:free",
+        messages:messages
+      })
+    });
+
+    const data=await res.json();
+    document.querySelectorAll(".msg.ai").forEach((el)=>{
+      if(el.textContent==="Alia tengah fikir... 💭") el.parentElement.remove();
+    });
+
+    if(!res.ok){
+      throw new Error(data?.error?.message || ("HTTP "+res.status));
+    }
+
+    let reply=data?.choices?.[0]?.message?.content?.trim();
+    if(!reply) throw new Error("Tiada jawapan diterima daripada OpenRouter.");
+
+    reply = reply
+      .replace(/\bkamu\b/gi, "ayang")
+      .replace(/\btidak\b/gi, "tak")
+      .replace(/\bsudah\b/gi, "dah")
+      .replace(/\bbisa\b/gi, "boleh")
+      .replace(/\bmengapa\b/gi, "kenapa")
+      .replace(/\buntukmu\b/gi, "untuk ayang")
+      .replace(/\bdenganmu\b/gi, "dengan ayang")
+      .replace(/\btungguin\b/gi, "tunggu")
+      .replace(/\bberbeda\b/gi, "lain");
+
+    addBubble(reply,"ai");
+    history.push({role:"assistant",content:reply});
+    if(history.length>20) history=history.slice(-20);
+    localStorage.setItem(HIST,JSON.stringify(history));
+
+  }catch(err){
+    document.querySelectorAll(".msg.ai").forEach((el)=>{
+      if(el.textContent==="Alia tengah fikir... 💭") el.parentElement.remove();
+    });
+    addBubble("Ayang, Alia tak dapat sambung 😭\n\n"+err.message,"ai");
+  }finally{
+    send.disabled=false;
+    input.focus();
+  }
+}
+
+document.getElementById("text").addEventListener("keydown",e=>{
+  if(e.key==="Enter") sendMessage();
+});
+
+render();
+</script>
+</body>
+</html>
